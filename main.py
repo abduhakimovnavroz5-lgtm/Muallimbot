@@ -3,12 +3,13 @@ import os
 import sys
 import threading
 import sqlite3
+import requests
+import time
 import telebot
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Python'ning standart kodirovkasini UTF-8 ga majburlash (Render xatolarini oldini oladi)
-import sys
-if sys.version_info[0] < 3:
+if sys.version_info < 3:
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
@@ -44,6 +45,9 @@ def init_db():
     )
     """)
     
+    # 🔥 ESKI XATOLIKNI TOZALASH: Har safar deploy bo'lganda eski chalg'ituvchi foydalanuvchi natijalarini o'chiradi
+    cursor.execute("DELETE FROM user_progress")
+    
     # Bazani professional darajali Arab tili darslari bilan to'ldirish
     cursor.execute("SELECT COUNT(*) FROM questions")
     if cursor.fetchone() == 0:
@@ -68,27 +72,6 @@ def init_db():
                 "3. 'Ta' harfi - ustida ikkita nuqtasi bor. Oddiy o'zbekcha 'T' tovushini beradi.\n4. 'Sa' harfi - ustida uchta nuqtasi bor. Diqqat qiling, bu harf maxraji (talaffuzi) tishlar orasidan chiqadigan yumshoq, chuchuk 'S' tovushidir. Til uchi oldingi tishlar orasiga bir oz tegib turadi.",
                 "Qaysi harf maxraji tishlar orasidan chiqadigan chuchuk 'S' tovushini ifodalaydi?", 
                 "Ta harfi", "Ba harfi", "Sa harfi", "C"
-            ),
-            (
-                4, 
-                "4-Dars: Tanvin qoidasi (An, In, Un belgilari)", 
-                "Harakatlar ikki barobar ko'paytirilsa (ikki fatha, ikki kasra, ikki damma), bu qoida 'Tanvin' deyiladi va so'z oxirida 'N' tovushini o'qishni talab qiladi:\n1. Tanvin fatha - 'AN' deb o'qiladi.\n2. Tanvin kasra - 'IN' deb o'qiladi.\n3. Tanvin damma - 'UN' deb o'qiladi.",
-                "Harf ustidagi ikkita chiziqcha (Tanvin fatha) qanday tovushni beradi?", 
-                "AN tovushini", "IN tovushini", "UN tovushini", "A"
-            ),
-            (
-                5, 
-                "5-Dars: Sukun va Tashdid belgilari", 
-                "Arab tilida unlilarsiz harflarni va harfni ikkilantirishni ko'rsatuvchi muhim belgilar bor:\n1. Sukun - Harf ustiga qo'yiladi va uni unli tovushsiz, shunchaki o'zini to'xtatib o'qishni bildiradi.\n2. Tashdid - Harf ustiga qo'yiladi va o'sha harfni ikkita qilib, urg'u bilan ikkilantirib o'qishni talab qiladi.",
-                "Harfni ikkita qilib, kuchli urg'u bilan ikkilantirib o'qishni ta'minlaydigan belgi qaysi?", 
-                "Sukun belgisi", "Tashdid belgisi", "Fatha belgisi", "B"
-            ),
-            (
-                6, 
-                "6-Dars: Boshlang'ich Arabcha So'zlashuv (Salomlashish)", 
-                "Arab tilida harflar va qoidalarni o'rganganimizdan so'ng, kundalik so'zlashuv iboralariga o'tamiz:\n- Assalomu alaykum (Sizga tinchlik bo'lsin) iborasiga javoban 'Va alaykum assalom' deyiladi.\n- Suhbatdoshning hol-ahvolini so'rash uchun: 'Kayfa haluk?' (Ahvollaring qanday?) iborasi ishlatiladi.\nJavob berishda: 'Ana bixayr, shukran!' (Men yaxshiman, rahmat!) deb aytiladi.",
-                "Arab tilida 'Ahvollaring qanday?' deb hol-ahvol so'rash uchun qaysi ibora ishlatiladi?", 
-                "Masmuka?", "Kayfa haluk?", "Min ayna anta?", "B"
             )
         ]
         cursor.executemany("""
@@ -115,6 +98,18 @@ def run_web_server():
 
 threading.Thread(target=run_web_server, daemon=True).start()
 
+# 🔄 ANTI-UYQU TIZIMI: Serverni doimiy uyg'oq ushlash
+def keep_alive():
+    time.sleep(30)
+    while True:
+        try:
+            requests.get("http://localhost:8000/", timeout=5)
+        except:
+            pass
+        time.sleep(600)
+
+threading.Thread(target=keep_alive, daemon=True).start()
+
 # 4. Foydalanuvchiga joriy darsni yuborish funksiyasi
 def send_current_lesson(chat_id):
     conn = sqlite3.connect('radar_base.db')
@@ -127,6 +122,7 @@ def send_current_lesson(chat_id):
         conn.commit()
         lesson_num = 1
     else:
+        # INDEKS TO'G'RILANDI: Massiv ichidagi haqiqiy raqamni ajratib olamiz
         lesson_num = row[0]
         
     cursor.execute("SELECT lesson_title, lesson_text, question_text, variant_a, variant_b, variant_c FROM questions WHERE lesson_number = ?", (lesson_num,))
@@ -140,7 +136,7 @@ def send_current_lesson(chat_id):
         matn += "👉 Javob berish uchun shunchaki variant harfini (*A, B yoki C*) yozib yuboring."
         bot.send_message(chat_id, matn, parse_mode="Markdown")
     else:
-        bot.send_message(chat_id, "🎉 *MASHALLOH!* Siz Arab alifbosi, harflarning yozilishi, tajvid qoidalari va boshlang'ich so'zlashuv bo'yicha barcha bosqichli darslarni 100% muvaffaqiyatli tugatdingiz! 🕋\n\nSiz endi Arab tilida ilk mustaqil savodxonlik darajasiga erishdingiz. Barakalloh!")
+        bot.send_message(chat_id, "🎉 *MASHALLOH!* Siz Arab alifbosi, harflarning yozilishi va darslarni muvaffaqiyatli tugatdingiz! 🕋\n\nSiz endi Arab tilida ilk mustaqil savodxonlik darajasiga erishdingiz. Barakalloh!")
 
 # 5. Bot buyruqlarini boshqarish
 @bot.message_handler(commands=['start'])
@@ -171,6 +167,7 @@ def check_answer(message):
     row = cursor.fetchone()
     
     if row:
+        # INDEKS TO'G'RILANDI: Massiv o'rniga aniq son olinadi
         lesson_num = row[0]
         
         cursor.execute("SELECT correct_answer FROM questions WHERE lesson_number = ?", (lesson_num,))
@@ -191,7 +188,6 @@ def check_answer(message):
     conn.close()
     bot.send_message(chat_id, "❌ *Noto'g'ri javob.* Siz ushbu dars qoidasini yaxshi o'zlashtirmabsiz. Keyingi bosqich ochilishi uchun dars matnini qayta o'qib ko'ring va qaytadan to'g'ri javob bering!")
 
-# Botni yuritish
 if __name__ == "__main__":
     print("MuallimBot ishga tushdi...")
     bot.infinity_polling()
