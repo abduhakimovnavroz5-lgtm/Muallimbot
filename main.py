@@ -11,21 +11,21 @@ class WebServer(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(b"Muallim Bot is running successfully!")
+        self.wfile.write(b"Muallim Bot is running successfully on Render!")
 
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), WebServer)
     server.serve_forever()
 
-# Render tizimidan tokenni xavfsiz va maxfiy o'qiymiz
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# Sizning shaxsiy bot tokeningiz kod ichiga joylashtirildi
+BOT_TOKEN = "8404509030:AAEKMzPhiF01Z30a0o4CZhU7tP9DcrTGVP4"
 API_URL = f"https://telegram.org{BOT_TOKEN}/"
 
 # 28 ta arab harflarining to'liq mukammal bazasi
 ARAB_ALIFBOSI = {
     "alif": {"harf": "ا", "talaffuz": "Alif", "bosh": "ا", "orta": "ـا", "oxir": "ـا", "batafsil": "Unli tovushlarni uzaytirish uchun xizmat qiladi yoki so'z boshida keladi."},
-    "ba": {"harf": "ب", "talaffuz": "Ba", "bosh": "بـ", "orta": "ـبـ", "oxir": "ـب", "batafsil": "Lablar mahkam tegib, tezda ochilishi orqali aytiladi. O'zbekcha 'B' ga o'xshaydi."},
+    "ba": {"harf": "ب", "talaffuz": "Ba", "bosh": "بـ", "orta": "ـbـ", "oxir": "ـب", "batafsil": "Lablar mahkam tegib, tezda ochilishi orqali aytiladi. O'zbekcha 'B' ga o'xshaydi."},
     "ta": {"harf": "ت", "talaffuz": "Ta", "bosh": "تـ", "orta": "ـتـ", "oxir": "ـت", "batafsil": "Til uchi yuqori tishlarning tubiga tegishi bilan aytiladi. O'zbekcha 'T' ga o'xshaydi."},
     "sa": {"harf": "ث", "talaffuz": "Sa (Sizlovchi)", "bosh": "ثـ", "orta": "ـثـ", "oxir": "ـث", "batafsil": "Til uchi oldingi tishlar orasidan sal chiqib, mayin aytiladi. Tishlararo 'S'."},
     "jim": {"harf": "ج", "talaffuz": "Jim", "bosh": "جـ", "orta": "ـجـ", "oxir": "ـج", "batafsil": "Til o'rtasi tanglayga tegishi bilan aytiladi. O'zbekcha 'J' tovushiga yaqin."},
@@ -43,11 +43,11 @@ ARAB_ALIFBOSI = {
     "zo_yoqon": {"harf": "ظ", "talaffuz": "Zo (Yo'g'on sizlovchi)", "bosh": "ظـ", "orta": "ـظـ", "oxir": "ـظ", "batafsil": "Til uchi tishlar orasidan chiqib, juda yo'g'on aytiladigan tishlararo 'Z'."},
     "ayn": {"harf": "ع", "talaffuz": "Ayn", "bosh": "عـ", "orta": "ـعـ", "oxir": "ـع", "batafsil": "Tomoqning o'rtasidan qisilib chiqadigan o'ziga xos tovush."},
     "g'ayn": {"harf": "غ", "talaffuz": "G'ayn", "bosh": "غـ", "orta": "ـغـ", "oxir": "ـغ", "batafsil": "O'zbekcha 'G'' tovushining tomoqdan chiqadigan yo'g'on shakli."},
-    "fa": {"harf": "ف", "talaffuz": "Fa", "bosh": "فـ", "orta": "ـfـ", "oxir": "ـف", "batafsil": "Yuqori tishlar pastki labning ichki qismiga tegib aytiladi. O'zbekcha 'F'."},
+    "fa": {"harf": "ف", "talaffuz": "Fa", "bosh": "فـ", "orta": "ـfaـ", "oxir": "ـف", "batafsil": "Yuqori tishlar pastki labning ichki qismiga tegib aytiladi. O'zbekcha 'F'."},
     "qof": {"harf": "ق", "talaffuz": "Qof", "bosh": "قـ", "orta": "ـقـ", "oxir": "ـق", "batafsil": "Til tubi tanglayning eng yumshoq joyiga tegib aytiladigan chuqur tomoq 'Q'si."},
     "kof": {"harf": "ك", "talaffuz": "Kof", "bosh": "كـ", "orta": "ـكـ", "oxir": "ـك", "batafsil": "Oddiy yumshoq va ingichka o'zbekcha 'K' tovushi."},
     "lam": {"harf": "ل", "talaffuz": "Lam", "bosh": "لـ", "orta": "ـلـ", "oxir": "ـل", "batafsil": "Til uchi yuqori milkka kengroq tegishi bilan aytiladi. Oddiy 'L'."},
-    "mim": {"harf": "م", "talaffuz": "Mim", "bosh": "مـ", "orta": "ـمـ", "oxir": "ـم", "batafsil": "Lablarning bir-biriga yengil tegib yopilishi bilan chiqadi. Oddiy 'M'."},
+    "mim": {"harf": "م", "talaffuz": "Mim", "bosh": "مـ", "orta": "ـmـ", "oxir": "ـم", "batafsil": "Lablarning bir-biriga yengil tegib yopilishi bilan chiqadi. Oddiy 'M'."},
     "nun": {"harf": "ن", "talaffuz": "Nun", "bosh": "نـ", "orta": "ـنـ", "oxir": "ـن", "batafsil": "Nafas burun bo'shlig'idan o'tib aytiladigan ingichka 'N' tovushi."},
     "vav": {"harf": "و", "talaffuz": "Vav", "bosh": "و", "orta": "ـو", "oxir": "ـو", "batafsil": "Lablar oldinga cho'zilib, doira shakliga kelganda chiqadigan cho'ziq 'V' (W) tovushi."},
     "ha_dumaloq": {"harf": "هـ", "talaffuz": "Ha (Ko'krak)", "bosh": "هـ", "orta": "ـهـ", "oxir": "ـه", "batafsil": "Tomoqning eng tubidan yengil aytiladigan 'H' (havo)."},
@@ -93,7 +93,7 @@ def bot_loop():
                                 [{"text": "📚 Alifbo darslari", "callback_data": "menyu_alifbo"}],
                                 [{"text": "❓ O'zini tekshirish (Test)", "callback_data": "menyu_test"}]
                             ]}
-                            xabar_yubor(chat_id, "Assalamu alaykum! Arab tili ustoz botiga xush kelibsiz. Quyidagi menyudan foydalanib o'rganishni boshlang:", json.dumps(markup))
+                            xabar_yubor(chat_id, f"Assalamu alaykum, {update['message']['from']['first_name']}!\nArab tili ustoz botiga xush kelibsiz. Quyidagi menyudan foydalanib o'rganishni boshlang:", json.dumps(markup))
                     elif "callback_query" in update:
                         cq = update["callback_query"]
                         chat_id = cq["message"]["chat"]["id"]
@@ -120,5 +120,6 @@ def bot_loop():
         time.sleep(1)
 
 if __name__ == "__main__":
+    # Web serverni alohida oqimda yuklaymiz (Render o'chib qolmasligi uchun)
     threading.Thread(target=run_web_server, daemon=True).start()
     bot_loop()
