@@ -1,99 +1,132 @@
 import os
-import requests
-import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import sys
 import threading
+import sqlite3
+import requests
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-BOT_TOKEN = "8404509030:AAEKMzPhiF01Z30a0o4CZhU7tP9DcrTGVP4"
+# 1. Telegram bot tokeni va aloqa manzili
+BOT_TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
 API_URL = f"https://telegram.org{BOT_TOKEN}/"
-RENDER_URL = "https://onrender.com"  # Sizning Render manzilingiz
 
-# Arab alifbosi ma'lumotlar bazasi
-ARAB_ALIFBOSI = {
-    "alif": {"harf": "ا", "talaffuz": "Alif", "bosh": "ا", "orta": "ـا", "oxir": "ـا", "batafsil": "Unli tovushlarni uzaytirish uchun xizmat qiladi yoki so'z boshida keladi."},
-    "ba": {"harf": "ب", "talaffuz": "Ba", "bosh": "بـ", "orta": "ـbـ", "oxir": "ـب", "batafsil": "Lablar mahkam tegib, tezda ochilishi orqali aytiladi. O'zbekcha 'B' ga o'xshaydi."},
-    "ta": {"harf": "ت", "talaffuz": "Ta", "bosh": "تـ", "orta": "ـtـ", "oxir": "ـت", "batafsil": "Til uchi yuqori tishlarning tubiga tegishi bilan aytiladi. O'zbekcha 'T' ga o'xshaydi."},
-}
+# 2. Arab tili darslari va savollar bazasini yaratish
+def init_db():
+    conn = sqlite3.connect('radar_base.db')
+    cursor = conn.cursor()
+    
+    # Darslar va savollar jadvali
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level_name TEXT NOT NULL,       
+        lesson_number INTEGER NOT NULL, 
+        question_text TEXT NOT NULL,    
+        variant_a TEXT,
+        variant_b TEXT,
+        variant_c TEXT,
+        correct_answer TEXT             
+    )
+    """)
+    
+    # Baza bo'sh bo'lsa, ichini professional Arab tili darslari bilan to'ldirish
+    cursor.execute("SELECT COUNT(*) FROM questions")
+    if cursor.fetchone()[0] == 0:
+        arabic_lessons = [
+            # 1-daraja: Alifbo darslari
+            ("Alifbo", 1, "Arab alifbosining birinchi harfi qaysi va u qanday tovushni beradi?", "ب (Ba)", "ا (Alif)", "ت (Ta)", "B"),
+            ("Alifbo", 2, "Qaysi harf maxraji (talaffuzi) tishlar orasidan chiqadigan chuchuk tovush hisoblanadi?", "ث (Saa)", "ج (Jiym)", "ح (Haa)", "A"),
+            ("Alifbo", 3, "Arab tilida harflarni qisqa cho'zib o'qishni ta'minlaydigan belgilar (A, I, U) nima deyiladi?", "Harakatlar (Harakat)", "Sukun", "Tashdid", "A"),
+            
+            # 2-daraja: So'zlashuv boshlang'ich
+            ("So'zlashuv", 1, "Arab tilida 'Sizga tinchlik bo'lsin' (Assalomu alaykum) iborasiga qanday javob qaytariladi?", "Ahlan va sahlan", "Va alaykum assalom", "Shukran", "B"),
+            ("So'zlashuv", 2, "Suhbatdoshdan hol-ahvol so'rash uchun qaysi ibora ishlatiladi?", "Kayfa haluk?", "Masmuka?", "Min ayna anta?", "A")
+        ]
+        cursor.executemany("""
+        INSERT INTO questions (level_name, lesson_number, question_text, variant_a, variant_b, variant_c, correct_answer)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, arabic_lessons)
+        print("Arab tili ta'lim tizimi bazaga muvaffaqiyatli yuklandi!")
+        
+    conn.commit()
+    conn.close()
 
-def xabar_yubor(chat_id, matn, reply_markup=None):
-    data = {"chat_id": chat_id, "text": matn}
-    if reply_markup: data["reply_markup"] = reply_markup
-    try: requests.post(API_URL + "sendMessage", json=data)
-    except: pass
+# Bazani ishga tushirish
+init_db()
 
-def menyu_yasa():
-    inline_keyboard = []
-    qator = []
-    for kalit, info in ARAB_ALIFBOSI.items():
-        qator.append({"text": f"{info['harf']} - {info['talaffuz']}", "callback_data": f"harf_{kalit}"})
-        if len(qator) == 3:
-            inline_keyboard.append(qator)
-            qator = []
-    if qator: inline_keyboard.append(qator)
-    inline_keyboard.append([{"text": "🔙 Orqaga", "callback_data": "bosh_menyu"}])
-    return {"inline_keyboard": inline_keyboard}
-
-def matnni_tahrirla(chat_id, message_id, matn, reply_markup=None):
-    data = {"chat_id": chat_id, "message_id": message_id, "text": matn}
-    if reply_markup: data["reply_markup"] = reply_markup
-    try: requests.post(API_URL + "editMessageText", json=data)
-    except: pass
-
-# Telegramdan kelayotgan xabarlarni qabul qiluvchi Webhook server
-class WebhookServer(BaseHTTPRequestHandler):
+# 3. Render ulanishi uchun HTTP Web Server (Render talab qiladigan portni ushlab turadi)
+class WebServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(b"Muallim Bot Webhook is ACTIVE!")
+        self.wfile.write(b"MuallimBot (Arab tili ustozi) muvaffaqiyatli ishlamoqda!")
 
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        self.send_response(200)
-        self.end_headers()
-        
+def run_web_server():
+    port = int(os.environ.get("PORT", 8000))
+    server = HTTPServer(("0.0.0.0", port), WebServerHandler)
+    server.serve_forever()
+
+# Veb serverni alohida oqimda (thread) orqa fonda ishga tushiramiz
+threading.Thread(target=run_web_server, daemon=True).start()
+
+# 4. Telegram orqali xabarlarni yuborish funksiyasi
+def send_msg(chat_id, text):
+    requests.post(f"{API_URL}sendMessage", json={"chat_id": chat_id, "text": text})
+
+# 5. Telegram Botning asosiy ishlash sikli (Polling)
+def check_updates():
+    offset = 0
+    print("MuallimBot foydalanuvchilarni kutmoqda...")
+    while True:
         try:
-            update = json.loads(post_data.decode('utf-8'))
-            
-            if "message" in update and "text" in update["message"]:
-                chat_id = update["message"]["chat"]["id"]
-                matn = update["message"]["text"]
-                
-                if matn == "/start":
-                    markup = {"inline_keyboard": [[{"text": "📚 Alifbo darslari", "callback_data": "menyu_alifbo"}]]}
-                    xabar_yubor(chat_id, "Assalamu alaykum! Arab tili ustoz botiga xush kelibsiz. Quyidagi menyudan foydalanib o'rganishni boshlang:", json.dumps(markup))
-                    
-            elif "callback_query" in update:
-                cq = update["callback_query"]
-                chat_id = cq["message"]["chat"]["id"]
-                msg_id = cq["message"]["message_id"]
-                data = cq["data"]
-                
-                if data == "menyu_alifbo":
-                    matnni_tahrirla(chat_id, msg_id, "Kerakli harfni tanlang:", json.dumps(menyu_yasa()))
-                elif data == "bosh_menyu":
-                    markup = {"inline_keyboard": [[{"text": "📚 Alifbo darslari", "callback_data": "menyu_alifbo"}]]}
-                    matnni_tahrirla(chat_id, msg_id, "Asosiy menyu:", json.dumps(markup))
-                elif data.startswith("harf_"):
-                    harf_kalit = data.replace("harf_", "")
-                    info = ARAB_ALIFBOSI[harf_kalit]
-                    javob = f"Harf: {info['harf']} ({info['talaffuz']})\n\n✍️ Shakllari:\n• Alohida: {info['harf']}\n• Boshida: {info['bosh']}\n• O'rtasida: {info['orta']}\n• Oxirida: {info['oxir']}\n\n🗣 Qoida:\n{info['batafsil']}"
-                    orqaga = {"inline_keyboard": [[{"text": "🔙 Alifboga qaytish", "callback_data": "menyu_alifbo"}]]}
-                    matnni_tahrirla(chat_id, msg_id, javob, json.dumps(orqaga))
-        except Exception:
-            pass
-
-def set_webhook():
-    time.sleep(2)  # Server to'liq yurguncha biroz kutamiz
-    # Telegramga Render manzilimizni Webhook sifatida ulaymiz
-    requests.get(f"{API_URL}setWebhook?url={RENDER_URL}")
+            response = requests.get(f"{API_URL}getUpdates", params={"offset": offset, "timeout": 20}, timeout=25)
+            if response.status_code == 200:
+                result = response.json()
+                if "result" in result:
+                    for update in result["result"]:
+                        offset = update["update_id"] + 1
+                        
+                        if "message" in update and "text" in update["message"]:
+                            chat_id = update["message"]["chat"]["id"]
+                            text = update["message"]["text"]
+                            
+                            # /start bosilganda kutib olish va menyu
+                            if text == "/start":
+                                menu = (
+                                    "Assalomu alaykum! MuallimBot-ga xush kelibsiz! 📚\n\n"
+                                    "Men sizga Arab alifbosini va Arab tilida gaplashishni noldan boshlab o'rgataman.\n\n"
+                                    "Quyidagi buyruqlarni yuboring:\n"
+                                    "📖 /alifbo - Harflarni o'rganish va test topshirish\n"
+                                    "🗣 /sozlashuv - Kundalik gaplarni o'rganish"
+                                )
+                                send_msg(chat_id, menu)
+                            
+                            # Alifbo darajasidagi savollar (Indekslar 100% to'g'rilandi)
+                            elif text == "/alifbo":
+                                conn = sqlite3.connect('radar_base.db')
+                                cursor = conn.cursor()
+                                cursor.execute("SELECT question_text, variant_a, variant_b, variant_c FROM questions WHERE level_name='Alifbo' ORDER BY RANDOM() LIMIT 1")
+                                row = cursor.fetchone()
+                                conn.close()
+                                
+                                if row:
+                                    savol = f"🟢 Alifbo darsi:\n\n{row[0]}\n\nA) {row[1]}\nB) {row[2]}\nC) {row[3]}"
+                                    send_msg(chat_id, savol)
+                            
+                            # So'zlashuv darajasidagi savollar (Indekslar 100% to'g'rilandi)
+                            elif text == "/sozlashuv":
+                                conn = sqlite3.connect('radar_base.db')
+                                cursor = conn.cursor()
+                                cursor.execute("SELECT question_text, variant_a, variant_b, variant_c FROM questions WHERE level_name='So'zlashuv' ORDER BY RANDOM() LIMIT 1")
+                                row = cursor.fetchone()
+                                conn.close()
+                                
+                                if row:
+                                    savol = f"🔵 So'zlashuv darsi:\n\n{row[0]}\n\nA) {row[1]}\nB) {row[2]}\nC) {row[3]}"
+                                    send_msg(chat_id, savol)
+                                    
+        except Exception as e:
+            print(f"Tizimda xatolik yuz berdi: {e}")
 
 if __name__ == "__main__":
-    # Webhook ulanishini alohida oqimda ishga tushiramiz
-    threading.Thread(target=set_webhook, daemon=True).start()
-    
-    port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), WebhookServer)
-    print("Webhook server muvaffaqiyatli ishlamoqda...")
-    server.serve_forever()
+    check_updates()
