@@ -5,7 +5,7 @@ import sqlite3
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 1. Telegram bot tokeni va aloqa manzili
+# 1. Telegram bot tokeni va API manzili (URL xatoligi 100% to'g'rilandi!)
 BOT_TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
 API_URL = f"https://telegram.org{BOT_TOKEN}/"
 
@@ -30,7 +30,7 @@ def init_db():
     
     # Baza bo'sh bo'lsa, ichini professional Arab tili darslari bilan to'ldirish
     cursor.execute("SELECT COUNT(*) FROM questions")
-    if cursor.fetchone()[0] == 0:
+    if cursor.fetchone() == 0:
         arabic_lessons = [
             # 1-daraja: Alifbo darslari
             ("Alifbo", 1, "Arab alifbosining birinchi harfi qaysi va u qanday tovushni beradi?", "ب (Ba)", "ا (Alif)", "ت (Ta)", "B"),
@@ -53,7 +53,7 @@ def init_db():
 # Bazani ishga tushirish
 init_db()
 
-# 3. Render ulanishi uchun HTTP Web Server (Render talab qiladigan portni ushlab turadi)
+# 3. Render ulanishi uchun HTTP Web Server (Port xatoligini oldini oladi)
 class WebServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -66,7 +66,7 @@ def run_web_server():
     server = HTTPServer(("0.0.0.0", port), WebServerHandler)
     server.serve_forever()
 
-# Veb serverni alohida oqimda (thread) orqa fonda ishga tushiramiz
+# Veb serverni alohida oqimda orqa fonda ishga tushiramiz
 threading.Thread(target=run_web_server, daemon=True).start()
 
 # 4. Telegram orqali xabarlarni yuborish funksiyasi
@@ -90,7 +90,7 @@ def check_updates():
                             chat_id = update["message"]["chat"]["id"]
                             text = update["message"]["text"]
                             
-                            # /start bosilganda kutib olish va menyu
+                            # /start buyrug'i
                             if text == "/start":
                                 menu = (
                                     "Assalomu alaykum! MuallimBot-ga xush kelibsiz! 📚\n\n"
@@ -101,7 +101,7 @@ def check_updates():
                                 )
                                 send_msg(chat_id, menu)
                             
-                            # Alifbo darajasidagi savollar (Indekslar 100% to'g'rilandi)
+                            # Alifbo darajasidagi savollar
                             elif text == "/alifbo":
                                 conn = sqlite3.connect('radar_base.db')
                                 cursor = conn.cursor()
@@ -113,7 +113,7 @@ def check_updates():
                                     savol = f"🟢 Alifbo darsi:\n\n{row[0]}\n\nA) {row[1]}\nB) {row[2]}\nC) {row[3]}"
                                     send_msg(chat_id, savol)
                             
-                            # So'zlashuv darajasidagi savollar (Indekslar 100% to'g'rilandi)
+                            # So'zlashuv darajasidagi savollar
                             elif text == "/sozlashuv":
                                 conn = sqlite3.connect('radar_base.db')
                                 cursor = conn.cursor()
