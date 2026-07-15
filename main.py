@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import threading
@@ -7,11 +6,6 @@ import requests
 import time
 import telebot
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
-# Python'ning standart kodirovkasini UTF-8 ga majburlash (Render xatolarini oldini oladi)
-if sys.version_info < 3:
-    reload(sys)
-    sys.setdefaultencoding('utf-8')
 
 # 1. Telegram bot tokeni
 TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
@@ -22,7 +16,6 @@ def init_db():
     conn = sqlite3.connect('radar_base.db')
     cursor = conn.cursor()
     
-    # Darslar va testlar jadvali
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +30,6 @@ def init_db():
     )
     """)
     
-    # Foydalanuvchilarning bosqichlarini (Level) saqlash jadvali
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_progress (
         chat_id INTEGER PRIMARY KEY,
@@ -45,12 +37,11 @@ def init_db():
     )
     """)
     
-    # 🔥 ESKI XATOLIKNI TOZALASH: Har safar deploy bo'lganda eski chalg'ituvchi foydalanuvchi natijalarini o'chiradi
+    # Yangi dars tizimi to'g'ri ishlashi uchun eski foydalanuvchi natijalarini tozalaydi
     cursor.execute("DELETE FROM user_progress")
     
-    # Bazani professional darajali Arab tili darslari bilan to'ldirish
     cursor.execute("SELECT COUNT(*) FROM questions")
-    if cursor.fetchone() == 0:
+    if cursor.fetchone()[0] == 0:
         arabic_course = [
             (
                 1, 
@@ -98,7 +89,7 @@ def run_web_server():
 
 threading.Thread(target=run_web_server, daemon=True).start()
 
-# 🔄 ANTI-UYQU TIZIMI: Serverni doimiy uyg'oq ushlash
+# 🔄 ANTI-UYQU TIZIMI
 def keep_alive():
     time.sleep(30)
     while True:
@@ -122,7 +113,6 @@ def send_current_lesson(chat_id):
         conn.commit()
         lesson_num = 1
     else:
-        # INDEKS TO'G'RILANDI: Massiv ichidagi haqiqiy raqamni ajratib olamiz
         lesson_num = row[0]
         
     cursor.execute("SELECT lesson_title, lesson_text, question_text, variant_a, variant_b, variant_c FROM questions WHERE lesson_number = ?", (lesson_num,))
@@ -136,7 +126,7 @@ def send_current_lesson(chat_id):
         matn += "👉 Javob berish uchun shunchaki variant harfini (*A, B yoki C*) yozib yuboring."
         bot.send_message(chat_id, matn, parse_mode="Markdown")
     else:
-        bot.send_message(chat_id, "🎉 *MASHALLOH!* Siz Arab alifbosi, harflarning yozilishi va darslarni muvaffaqiyatli tugatdingiz! 🕋\n\nSiz endi Arab tilida ilk mustaqil savodxonlik darajasiga erishdingiz. Barakalloh!")
+        bot.send_message(chat_id, "🎉 *MASHALLOH!* Siz Arab alifbosi darslarini muvaffaqiyatli tugatdingiz! 🕋\n\nSiz endi Arab tilida ilk mustaqil savodxonlik darajasiga erishdingiz. Barakalloh!")
 
 # 5. Bot buyruqlarini boshqarish
 @bot.message_handler(commands=['start'])
@@ -167,7 +157,6 @@ def check_answer(message):
     row = cursor.fetchone()
     
     if row:
-        # INDEKS TO'G'RILANDI: Massiv o'rniga aniq son olinadi
         lesson_num = row[0]
         
         cursor.execute("SELECT correct_answer FROM questions WHERE lesson_number = ?", (lesson_num,))
