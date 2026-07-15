@@ -5,6 +5,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 
+# Maxfiy tokeningiz to'g'rilandi
 BOT_TOKEN = "8404509030:AAEKMzPhiF01Z30a0o4CZhU7tP9DcrTGVP4"
 API_URL = f"https://telegram.org{BOT_TOKEN}/"
 
@@ -22,7 +23,7 @@ def run_web_server():
 
 ARAB_ALIFBOSI = {
     "alif": {"harf": "ا", "talaffuz": "Alif", "bosh": "ا", "orta": "ـا", "oxir": "ـا", "batafsil": "Unli tovushlarni uzaytirish uchun xizmat qiladi."},
-    "ba": {"harf": "ب", "talaffuz": "Ba", "bosh": "بـ", "orta": "ـبـ", "oxir": "ـب", "batafsil": "Lablar mahkam tegib ochiladi. O'zbekcha 'B' ga o'xshaydi."},
+    "ba": {"harf": "ب", "talaffuz": "Ba", "bosh": "بـ", "orta": "ـbـ", "oxir": "ـب", "batafsil": "Lablar mahkam tegib ochiladi. O'zbekcha 'B' ga o'xshaydi."},
     "ta": {"harf": "ت", "talaffuz": "Ta", "bosh": "تـ", "orta": "ـتـ", "oxir": "ـت", "batafsil": "Til uchi yuqori tishlar tubiga tegadi. O'zbekcha 'T'."},
 }
 
@@ -52,10 +53,6 @@ def matnni_tahrirla(chat_id, message_id, matn, reply_markup=None):
 
 def bot_loop():
     offset = 0
-    # Telegram eski xabarlarni o'chirib yuborishi uchun birinchi tozalaymiz
-    try: requests.get(API_URL + "getUpdates?offset=-1")
-    except: pass
-    
     while True:
         try:
             r = requests.get(API_URL + f"getUpdates?offset={offset}&timeout=10").json()
