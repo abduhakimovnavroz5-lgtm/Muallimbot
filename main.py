@@ -1,8 +1,16 @@
+# -*- coding: utf-8 -*-
 import os
+import sys
 import threading
 import sqlite3
 import telebot
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# Python'ning standart kodirovkasini UTF-8 ga majburlash (Render xatolarini oldini oladi)
+import sys
+if sys.version_info[0] < 3:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
 
 # 1. Telegram bot tokeni
 TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
@@ -42,63 +50,43 @@ def init_db():
         arabic_course = [
             (
                 1, 
-                "1-Dars: Alif (ا) harfi va Harakatlar (Fatha, Kasra, Damma)", 
-                "Arab alifbosi o'ngdan chapga qarab yoziladi va 28 ta harfdan iborat. Birinchi harf - 'Alif' (ا) harfidir. U o'zi mustaqil tovushga ega emas, unga unli tovushni berish uchun Harakatlar (belgilar) ishlatiladi:\n"
-                "1. Fatha (harf ustidagi chiziq) - 'A' tovushini beradi. (اَ - A)\n"
-                "2. Kasra (harf ostidagi chiziq) - 'I' tovushini beradi. (اِ - I)\n"
-                "3. Damma (harf ustidagi kichik vergul) - 'U' tovushini beradi. (اُ - U)",
+                "1-Dars: Alif harfi va Harakatlar (Fatha, Kasra, Damma)", 
+                "Arab alifbosi o'ngdan chapga qarab yoziladi va 28 ta harfdan iborat. Birinchi harf - 'Alif' (A) harfidir. U o'zi mustaqil tovushga ega emas, unga unli tovushni berish uchun Harakatlar (belgilar) ishlatiladi:\n1. Fatha (harf ustidagi chiziq) - 'A' tovushini beradi.\n2. Kasra (harf ostidagi chiziq) - 'I' tovushini beradi.\n3. Damma (harf ustidagi kichik vergul) - 'U' tovushini beradi.",
                 "Alif harfining ostiga chiziqcha (kasra) qo'yilsa, u qanday tovush berib o'qiladi?", 
                 "A tovushini", "I tovushini", "U tovushini", "B"
             ),
             (
                 2, 
-                "2-Dars: Ba (ب) harfi va uning so'z ichida yozilishi", 
-                "Ikkinchi harf - 'Ba' (ب) harfi. U o'zbek tilidagi chiziqli 'B' tovushini beradi. Pastida bitta nuqtasi bo'ladi.\n"
-                "Arab harflari so'zdagi o'rniga qarab shaklini o'zgartiradi:\n"
-                "- Alohida shakli: ب\n"
-                "- So'z boshida yozilishi: بـ (chap tomonga bog'lanadi)\n"
-                "- So'z o'rtasida yozilishi: ـبـ (ikki tomonga bog'lanadi)\n"
-                "- So'z oxirida yozilishi: ـب (o'ng tomonga bog'lanadi)\n"
-                "Harakatlar bilan: بَ (Ba), بِ (Bi), بُ (Bu)",
+                "2-Dars: Ba harfi va uning so'z ichida yozilishi", 
+                "Ikkinchi harf - 'Ba' harfi. U o'zbek tilidagi chiziqli 'B' tovushini beradi. Pastida bitta nuqtasi bo'ladi.\nArab harflari so'zdagi o'rniga qarab shaklini o'zgartiradi:\n- Alohida shakli: Ba\n- So'z boshida yozilishi: Ba- (chap tomonga bog'lanadi)\n- So'z o'rtasida yozilishi: -Ba- (ikki tomonga bog'lanadi)\n- So'z oxirida yozilishi: -Ba (o'ng tomonga bog'lanadi)",
                 "'Ba' harfining so'z boshida yozilishi qaysi variantda to'g'ri ko'rsatilgan?", 
-                "بـ", "ـبـ", "ـب", "A"
+                "So'z boshida", "So'z o'rtasida", "So'z oxirida", "A"
             ),
             (
                 3, 
-                "3-Dars: Ta (ت) va Sa (ث) harflari (Maxraj qoidalari)", 
-                "3. 'Ta' (ت) harfi - ustida ikkita nuqtasi bor. Oddiy o'zbekcha 'T' tovushini beradi.\n"
-                "4. 'Sa' (ث) harfi - ustida uchta nuqtasi bor. Diqqat qiling, bu harf maxraji (talaffuzi) tishlar orasidan chiqadigan yumshoq, chuchuk 'S' tovushidir. Til uchi oldingi tishlar orasiga bir oz tegib turadi.\n"
-                "Harakatlar bilan: تَ (Ta), تِ (Ti), تُ (Tu) | ثَ (Sa), ثِ (Si), ثُ (Su)",
+                "3-Dars: Ta va Sa harflari (Maxraj qoidalari)", 
+                "3. 'Ta' harfi - ustida ikkita nuqtasi bor. Oddiy o'zbekcha 'T' tovushini beradi.\n4. 'Sa' harfi - ustida uchta nuqtasi bor. Diqqat qiling, bu harf maxraji (talaffuzi) tishlar orasidan chiqadigan yumshoq, chuchuk 'S' tovushidir. Til uchi oldingi tishlar orasiga bir oz tegib turadi.",
                 "Qaysi harf maxraji tishlar orasidan chiqadigan chuchuk 'S' tovushini ifodalaydi?", 
-                "ت (Ta)", "ب (Ba)", "ث (Sa)", "C"
+                "Ta harfi", "Ba harfi", "Sa harfi", "C"
             ),
             (
                 4, 
                 "4-Dars: Tanvin qoidasi (An, In, Un belgilari)", 
-                "Harakatlar ikki barobar ko'paytirilsa (ikki fatha, ikki kasra, ikki damma), bu qoida 'Tanvin' deyiladi va so'z oxirida 'N' tovushini o'qishni talab qiladi:\n"
-                "1. Tanvin fatha (ً ) - 'AN' deb o'qiladi.\n"
-                "2. Tanvin kasra (ٍ ) - 'IN' deb o'qiladi.\n"
-                "3. Tanvin damma (ٌ ) - 'UN' deb o'qiladi.\n"
-                "Masalan: بً (Ban), بٍ (Bin), بٌ (Bun).",
+                "Harakatlar ikki barobar ko'paytirilsa (ikki fatha, ikki kasra, ikki damma), bu qoida 'Tanvin' deyiladi va so'z oxirida 'N' tovushini o'qishni talab qiladi:\n1. Tanvin fatha - 'AN' deb o'qiladi.\n2. Tanvin kasra - 'IN' deb o'qiladi.\n3. Tanvin damma - 'UN' deb o'qiladi.",
                 "Harf ustidagi ikkita chiziqcha (Tanvin fatha) qanday tovushni beradi?", 
                 "AN tovushini", "IN tovushini", "UN tovushini", "A"
             ),
             (
                 5, 
-                "5-Dars: Sukun (ْ) va Tashdid (ّ) belgilari", 
-                "Arab tilida unlilarsiz harflarni va harfni ikkilantirishni ko'rsatuvchi muhim belgilar bor:\n"
-                "1. Sukun (ْ ) - Harf ustiga qo'yiladi va uni unli tovushsiz, shunchaki o'zini to'xtatib o'qishni bildiradi (Masalan: اَبْ - Ab).\n"
-                "2. Tashdid (ّ ) - Harf ustiga qo'yiladi va o'sha harfni ikkita qilib, urg'u bilan ikkilantirib o'qishni talab qiladi (Masalan: اَبَّ - Abba).",
+                "5-Dars: Sukun va Tashdid belgilari", 
+                "Arab tilida unlilarsiz harflarni va harfni ikkilantirishni ko'rsatuvchi muhim belgilar bor:\n1. Sukun - Harf ustiga qo'yiladi va uni unli tovushsiz, shunchaki o'zini to'xtatib o'qishni bildiradi.\n2. Tashdid - Harf ustiga qo'yiladi va o'sha harfni ikkita qilib, urg'u bilan ikkilantirib o'qishni talab qiladi.",
                 "Harfni ikkita qilib, kuchli urg'u bilan ikkilantirib o'qishni ta'minlaydigan belgi qaysi?", 
-                "Sukun (ْ)", "Tashdid (ّ)", "Fatha (َ)", "B"
+                "Sukun belgisi", "Tashdid belgisi", "Fatha belgisi", "B"
             ),
             (
                 6, 
                 "6-Dars: Boshlang'ich Arabcha So'zlashuv (Salomlashish)", 
-                "Arab tilida harflar va qoidalarni o'rganganimizdan so'ng, kundalik so'zlashuv iboralariga o'tamiz:\n"
-                "- Assalomu alaykum (Sizga tinchlik bo'lsin) iborasiga javoban 'Va alaykum assalom' deyiladi.\n"
-                "- Suhbatdoshning hol-ahvolini so'rash uchun: 'Kayfa haluk?' (Ahvollaring qanday?) iborasi ishlatiladi.\n"
-                "Javob berishda: 'Ana bixayr, shukran!' (Men yaxshiman, rahmat!) deb aytiladi.",
+                "Arab tilida harflar va qoidalarni o'rganganimizdan so'ng, kundalik so'zlashuv iboralariga o'tamiz:\n- Assalomu alaykum (Sizga tinchlik bo'lsin) iborasiga javoban 'Va alaykum assalom' deyiladi.\n- Suhbatdoshning hol-ahvolini so'rash uchun: 'Kayfa haluk?' (Ahvollaring qanday?) iborasi ishlatiladi.\nJavob berishda: 'Ana bixayr, shukran!' (Men yaxshiman, rahmat!) deb aytiladi.",
                 "Arab tilida 'Ahvollaring qanday?' deb hol-ahvol so'rash uchun qaysi ibora ishlatiladi?", 
                 "Masmuka?", "Kayfa haluk?", "Min ayna anta?", "B"
             )
@@ -112,13 +100,13 @@ def init_db():
 
 init_db()
 
-# 3. Render ulanishi uchun HTTP Web Server (Port xatoligini oldini oladi)
+# 3. Render ulanishi uchun HTTP Web Server
 class WebServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(b"MuallimBot (Arab tili mukammal ta'lim tizimi) faol holatda!")
+        self.wfile.write(b"MuallimBot faol holatda!")
 
 def run_web_server():
     port = int(os.environ.get("PORT", 8000))
@@ -132,7 +120,6 @@ def send_current_lesson(chat_id):
     conn = sqlite3.connect('radar_base.db')
     cursor = conn.cursor()
     
-    # Foydalanuvchining hozirgi dars darajasini tekshirish
     cursor.execute("SELECT current_lesson FROM user_progress WHERE chat_id = ?", (chat_id,))
     row = cursor.fetchone()
     if not row:
@@ -142,7 +129,6 @@ def send_current_lesson(chat_id):
     else:
         lesson_num = row[0]
         
-    # Ma'lumotlarni bazadan olish
     cursor.execute("SELECT lesson_title, lesson_text, question_text, variant_a, variant_b, variant_c FROM questions WHERE lesson_number = ?", (lesson_num,))
     lesson = cursor.fetchone()
     conn.close()
@@ -203,3 +189,9 @@ def check_answer(message):
                 return
 
     conn.close()
+    bot.send_message(chat_id, "❌ *Noto'g'ri javob.* Siz ushbu dars qoidasini yaxshi o'zlashtirmabsiz. Keyingi bosqich ochilishi uchun dars matnini qayta o'qib ko'ring va qaytadan to'g'ri javob bering!")
+
+# Botni yuritish
+if __name__ == "__main__":
+    print("MuallimBot ishga tushdi...")
+    bot.infinity_polling()
