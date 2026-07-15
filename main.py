@@ -4,7 +4,7 @@ import sqlite3
 import telebot
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 1. Telegram bot tokeni (Hech qanday URL yozish shart emas!)
+# 1. Telegram bot tokeni 
 TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
 bot = telebot.TeleBot(TOKEN)
 
@@ -27,11 +27,13 @@ def init_db():
     
     cursor.execute("SELECT COUNT(*) FROM questions")
     if cursor.fetchone() == 0:
+        # Tutuq belgisi muammosini hal qilish uchun "Sozlashuv" deb yozildi
         arabic_lessons = [
             ("Alifbo", 1, "Arab alifbosining birinchi harfi qaysi va u qanday tovushni beradi?", "ب (Ba)", "ا (Alif)", "ت (Ta)", "B"),
             ("Alifbo", 2, "Qaysi harf maxraji (talaffuzi) tishlar orasidan chiqadigan chuchuk tovush hisoblanadi?", "ث (Saa)", "ج (Jiym)", "ح (Haa)", "A"),
             ("Alifbo", 3, "Arab tilida harflarni qisqa cho'zib o'qishni ta'minlaydigan belgilar (A, I, U) nima deyiladi?", "Harakatlar (Harakat)", "Sukun", "Tashdid", "A"),
-            ("So'zlashuv", 1, "Arab tilida 'Sizga tinchlik bo'lsin' iborasiga qanday javob qaytariladi?", "Ahlan va sahlan", "Va alaykum assalom", "Shukran", "B")
+            ("Sozlashuv", 1, "Arab tilida 'Sizga tinchlik bo'lsin' iborasiga qanday javob qaytariladi?", "Ahlan va sahlan", "Va alaykum assalom", "Shukran", "B"),
+            ("Sozlashuv", 2, "Suhbatdoshdan hol-ahvol so'rash uchun qaysi ibora ishlatiladi?", "Kayfa haluk?", "Masmuka?", "Min ayna anta?", "A")
         ]
         cursor.executemany("""
         INSERT INTO questions (level_name, lesson_number, question_text, variant_a, variant_b, variant_c, correct_answer)
@@ -42,7 +44,7 @@ def init_db():
 
 init_db()
 
-# 3. Render ulanishi uchun HTTP Web Server (Port uchun kerak)
+# 3. Render ulanishi uchun HTTP Web Server
 class WebServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -84,7 +86,8 @@ def send_alifbo(message):
 def send_sozlashuv(message):
     conn = sqlite3.connect('radar_base.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT question_text, variant_a, variant_b, variant_c FROM questions WHERE level_name='So'zlashuv' ORDER BY RANDOM() LIMIT 1")
+    # Bu yerda ham daraja nomi o'zgartirildi
+    cursor.execute("SELECT question_text, variant_a, variant_b, variant_c FROM questions WHERE level_name='Sozlashuv' ORDER BY RANDOM() LIMIT 1")
     row = cursor.fetchone()
     conn.close()
     if row:
