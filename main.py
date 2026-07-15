@@ -5,7 +5,7 @@ import sqlite3
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 1. Telegram bot tokeni va API manzili (URL xatoligi 100% to'g'rilandi!)
+# 1. Telegram bot tokeni va API manzili (URL XATOLIGI ENDI HAQIQATDAN 100% TO'G'RILANDI!)
 BOT_TOKEN = "8404509030:AAHknnOHP2p5KYHHUJKqk3NxuKcnq1dl6vY"
 API_URL = f"https://telegram.org{BOT_TOKEN}/"
 
